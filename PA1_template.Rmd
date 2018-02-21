@@ -8,18 +8,109 @@ output:
 
 ## Loading and preprocessing the data
 
+We start by unziping the file, reading data and having a look at it
+
+```{r reading}
+unzip("activity.zip")
+read.csv("activity.csv") -> activity.df
+str(activity.df)
+```
 
 
 ## What is mean total number of steps taken per day?
 
+First we create a data frame, that summarizes the number of steps by days using *dplyr* package
 
+```{r databydays}
+library(dplyr)
+step_days <- activity.df %>%
+    group_by(date) %>%
+    summarize(steps = sum(steps, na.rm=TRUE))
+
+step_days
+```
+
+Then we plot the data, using *ggplot2*
+```{r plotbydays}
+library(ggplot2)
+qplot(steps, data = step_days, xlab = "Steps per day")
+```
+
+Finally, we report the mean and median number of steps per day
+```{r m_days}
+mean(step_days$steps) -> mean_steps
+median(step_days$steps) -> median_steps
+
+```
+
+The mean is `r mean_steps` and median is `r median_steps`
 
 ## What is the average daily activity pattern?
+
+We start by creating a data frame with data by intervals
+
+```{r databyintervals}
+step_intervals <- activity.df %>%
+    group_by(interval) %>%
+    summarize(steps = mean(steps, na.rm=TRUE))
+
+step_intervals
+```
+
+Now we plot the computed data
+
+```{r plotbyintervals}
+qplot(interval, steps, data=step_intervals, geom = "line", ylab="steps on average")
+```
+
+Finaly, let's determine the interval with maximum number of steps
+
+```{r m_intervals}
+max(step_intervals$steps) -> maxsteps
+step_intervals$steps==maxsteps
+filter(step_intervals, steps==maxsteps)
+```
 
 
 
 ## Imputing missing values
 
+First let's calculate the number of rows with missing values in the dataset
 
+``` {r NAs}
+sum(!complete.cases(activity.df))
+```
+
+Now we fill the NAs with the mean steps for that inverval
+``` {r NAfilling}
+act_noNA <- activity.df
+for (i in 1:nrow(act_noNA)) {
+    if (is.na(act_noNA$steps[i])) {
+        act_noNA$interval[i] -> inter
+        step_intervals[step_intervals$interval==inter, 2] -> steps
+        act_noNA$steps[i] <- as.double(steps)
+    }
+}
+
+```
+
+Now let's repeat the previous analyses without the missing data
+```{r noNA}
+step_days_noNA <- act_noNA %>%
+    group_by(date) %>%
+    summarize(steps = sum(steps, na.rm=TRUE))
+
+qplot(steps, data = step_days_noNA, xlab = "Steps per day")
+```
+
+Finally, we report the mean and median number of steps per day without NA
+```{r m_days_noNA}
+mean(step_days_noNA$steps) -> mean_steps_noNA
+median(step_days_noNA$steps) -> median_steps_noNA
+
+```
+
+The corrected mean is `r mean_steps_noNA` and corrected median is `r median_steps_noNA`
+Removing NAs did not change the median, but increased the mean
 
 ## Are there differences in activity patterns between weekdays and weekends?
